@@ -1,18 +1,20 @@
 /*
-  ______                 __            ____                      
- / ____/___  ____  _____/ /_____  ____/ / /__  ____  ____  _____
-/ /   / __ \/ __ \/ ___/ //_/ _ \/ __  / / _ \/ __ \/ __ \/ ___/
-/ /___/ /_/ / / / / /__/ ,< /  __/ /_/ / /  __/ /_/ / /_/ (__  ) 
-\____/\____/_/ /_/\___/_/|_|\___/\__,_/_/\___/ .___/ .___/____/  
-                                             /_/   /_/           
-             Craze Panel v0.3.0 (Oz Edition)
-          (c) 2024 Mehetab and contributors credit skyportlabs 
+ *           __                          __ 
+*      _____/ /____  ______  ____  _____/ /_
+ *    / ___/ //_/ / / / __ \/ __ \/ ___/ __/
+ *   (__  ) ,< / /_/ / /_/ / /_/ / /  / /_  
+ *  /____/_/|_|\__, / .___/\____/_/   \__/  
+ *           /____/_/                  
+ *              
+ *  Skyport Panel 0.3.0 (Oz)
+ *  (c) 2024 Matt James and contributors
+ * 
 */
 
 /**
- * @fileoverview Main server file for Craze Panel. Sets up the express application,
- * configures middleware for sessions, body parsing, WebSockets, plugins, and dynamically loads route
- * modules. Initializes logging and server startup.
+ * @fileoverview Main server file for Skyport Panel. Sets up the express application,
+ * configures middleware for sessions, body parsing, and websocket enhancements, and dynamically loads route
+ * modules. This file also sets up the server to listen on a configured port and initializes logging.
  */
 
 const express = require('express');
@@ -20,41 +22,38 @@ const session = require('express-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 const fs = require('node:fs');
-const path = require('path');
-const chalk = require('chalk');
-const expressWs = require('express-ws');
-const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
-const sqlite = require("better-sqlite3");
-const SqliteStore = require("better-sqlite3-session-store")(session);
-const crypto = require('crypto');
 const config = require('./config.json');
 const ascii = fs.readFileSync('./handlers/ascii.txt', 'utf8');
+const app = express();
+const path = require('path');
+const chalk = require('chalk');
+const expressWs = require('express-ws')(app);
 const { db } = require('./handlers/db.js');
 const translationMiddleware = require('./handlers/translation');
-const analytics = require('./utils/analytics.js');
-const { loadPlugins } = require('./plugins/loadPls.js');
-const { init } = require('./handlers/init.js');
-const log = new (require('cat-loggr'))();
-
-// Load theme and plugins
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const theme = require('./storage/theme.json');
+const analytics = require('./utils/analytics.js');
+
+const sqlite = require("better-sqlite3");
+const SqliteStore = require("better-sqlite3-session-store")(session);
+const sessionStorage = new sqlite("sessions.db");
+const { loadPlugins } = require('./plugins/loadPls.js');
 let plugins = loadPlugins(path.join(__dirname, './plugins'));
 plugins = Object.values(plugins).map(plugin => plugin.config);
 
-// App and WebSocket instance
-const app = express();
-expressWs(app);
+const { init } = require('./handlers/init.js');
 
-// Session database
-const sessionStorage = new sqlite("sessions.db");
+const log = new (require('cat-loggr'))();
 
-// Session config
 app.use(
   session({
     store: new SqliteStore({
       client: sessionStorage,
-      expired: { clear: true, intervalMs: 9000000 }
+      expired: {
+        clear: true,
+        intervalMs: 9000000
+      }
     }),
     secret: config.session_secret || "secret",
     resave: true,
@@ -62,7 +61,12 @@ app.use(
   })
 );
 
-// Middleware setup
+/**
+ * Initializes the Express application with necessary middleware for parsing HTTP request bodies,
+ * handling sessions, and integrating WebSocket functionalities. It sets EJS as the view engine,
+ * reads route files from the 'routes' directory, and applies WebSocket enhancements to each route.
+ * Finally, it sets up static file serving and starts listening on a specified port.
+ */
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -71,12 +75,12 @@ app.use(translationMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Rate limiter for POST requests
 const postRateLimiter = rateLimit({
   windowMs: 60 * 100,
   max: 6,
   message: 'Too many requests, please try again later'
 });
+
 app.use((req, res, next) => {
   if (req.method === 'POST') {
     postRateLimiter(req, res, next);
@@ -85,12 +89,22 @@ app.use((req, res, next) => {
   }
 });
 
-// Random string generator
+/**
+ * Generates a random 16-character hexadecimal string.
+ * 
+ * @param {number} length - The length of the string to generate.
+ * @returns {string} - The generated string.
+ */
 function generateRandomString(length) {
-  return crypto.randomBytes(length).toString('hex').substring(0, length);
+  return crypto.getRandomValues(new Uint8Array(length)).reduce((str, byte) => str + String.fromCharCode(byte), '');
 }
 
-// Replace 'Random' values in an object
+/**
+ * Recursively traverses an object and replaces any value that is exactly "random"
+ * with a randomly generated string.
+ * 
+ * @param {Object} obj - The object to traverse.
+ */
 function replaceRandomValues(obj) {
   for (const key in obj) {
     if (typeof obj[key] === 'object' && obj[key] !== null) {
@@ -101,41 +115,44 @@ function replaceRandomValues(obj) {
   }
 }
 
-// Update config.json replacing 'Random'
+/**
+ * Updates the config.json file by replacing "random" values with random strings.
+ */
 async function updateConfig() {
   const configPath = './config.json';
+  
   try {
     let configData = fs.readFileSync(configPath, 'utf8');
-    let configObj = JSON.parse(configData);
-    replaceRandomValues(configObj);
-    fs.writeFileSync(configPath, JSON.stringify(configObj, null, 2), 'utf8');
+    let config = JSON.parse(configData);
+
+    replaceRandomValues(config);
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
   } catch (error) {
     log.error('Error updating config:', error);
   }
 }
+
 updateConfig();
 
-// Language detection
 function getLanguages() {
   return fs.readdirSync(__dirname + '/lang').map(file => file.split('.')[0]);
 }
 
-// Language setter route
 app.get('/setLanguage', async (req, res) => {
   const lang = req.query.lang;
   if (lang && getLanguages().includes(lang)) {
-    res.cookie('lang', lang, { maxAge: 90000000, httpOnly: true, sameSite: 'strict' });
-    req.user.lang = lang;
-    res.json({ success: true });
+      res.cookie('lang', lang, { maxAge: 90000000, httpOnly: true, sameSite: 'strict' });
+      req.user.lang = lang;
+      res.json({ success: true });
   } else {
-    res.json({ success: false });
+      res.json({ success: false });
   }
 });
 
-// Attach locals and themes to requests
 app.use(async (req, res, next) => {
   try {
     const settings = await db.get('settings');
+
     res.locals.languages = getLanguages();
     res.locals.ogTitle = config.ogTitle;
     res.locals.ogDescription = config.ogDescription;
@@ -151,8 +168,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Cache control for production
-if (config.mode === 'production') {
+if (config.mode === 'production' || false) {
   app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
@@ -166,22 +182,38 @@ if (config.mode === 'production') {
   });
 }
 
-// View engine and public static assets
 app.set('view engine', 'ejs');
+/**
+ * Configures the Express application to serve static files from the 'public' directory, providing
+ * access to client-side resources like images, JavaScript files, and CSS stylesheets without additional
+ * routing. The server then starts listening on a port defined in the configuration file, logging the port
+ * number to indicate successful startup.
+ */
 app.use(express.static('public'));
 
-// Route loader
+/**
+ * Dynamically loads all route modules from the 'routes' directory, applying WebSocket support to each.
+ * Logs the loaded routes and mounts them to the Express application under the root path. This allows for
+ * modular route definitions that can be independently maintained and easily scaled.
+ */
+
 const routesDir = path.join(__dirname, 'routes');
 function loadRoutes(directory) {
   fs.readdirSync(directory).forEach(file => {
     const fullPath = path.join(directory, file);
     const stat = fs.statSync(fullPath);
+
     if (stat.isDirectory()) {
       loadRoutes(fullPath);
     } else if (stat.isFile() && path.extname(file) === '.js') {
       const route = require(fullPath);
       expressWs.applyTo(route);
-      app.use("/", route);
+
+      if (fullPath.includes(path.join('routes', 'Admin'))) {
+        app.use("/", route);
+      } else {
+        app.use("/", route);
+      }
     }
   });
 }
@@ -191,20 +223,18 @@ loadRoutes(routesDir);
 const pluginRoutes = require('./plugins/pluginManager.js');
 app.use("/", pluginRoutes);
 const pluginDir = path.join(__dirname, 'plugins');
-const pluginViewsDir = fs.readdirSync(pluginDir).map(addonName => path.join(pluginDir, addonName, 'views'));
-app.set('views', [path.join(__dirname, 'views'), ...pluginViewsDir]);
+const PluginViewsDir = fs.readdirSync(pluginDir).map(addonName => path.join(pluginDir, addonName, 'views'));
+app.set('views', [path.join(__dirname, 'views'), ...PluginViewsDir]);
 
-// Init tasks
+// Init
 init();
 
-// Startup banner and port
 console.log(chalk.gray(ascii) + chalk.white(`version v${config.version}\n`));
-app.listen(config.port, () => log.info(`Craze Panel is listening on port ${config.port}`));
+app.listen(config.port, () => log.info(`Skyport is listening on port ${config.port}`));
 
-// 404 Error page
-app.get('*', async function (req, res) {
+app.get('*', async function(req, res){
   res.render('errors/404', {
     req,
-    name: await db.get('name') || 'Craze Panel'
-  });
+    name: await db.get('name') || 'Skyport'
+  })
 });
