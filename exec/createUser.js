@@ -78,7 +78,7 @@ async function main() {
         email = args.email;
         password = args.password;
     } else {
-        log.init('Create a new *admin* user for the Skyport Panel:');
+        log.init('Create a new *admin* user for the CRAZE Panel:');
         log.init('You can make regular users from the admin -> users page.');
         
         username = await askQuestion("Username: ");
@@ -91,6 +91,13 @@ async function main() {
         }
 
         password = await askQuestion("Password: ");
+        const retypePassword = await askQuestion("Retype Password: ");
+
+        if (password !== retypePassword) {
+            log.error("Passwords do not match!");
+            rl.close();
+            return;
+        }
     }
 
     const userExists = await doesUserExist(username);

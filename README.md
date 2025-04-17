@@ -3,14 +3,26 @@
 ![Discord](https://img.shields.io/discord/1253782902618194011?label=Discord&logo=Discord&logoColor=white&style=for-the-badge)
 ![GitHub contributors](https://img.shields.io/github/contributors/skyportlabs/panel?style=for-the-badge)
 
-# Skyport Panel
+# CRAZEPANEL
 
 ## Overview
-Skyport is an open source panel for managing and operating game servers and applications built using Node.js with Express and Dockerode. [Click here to join our Discord.](https://skyport.privt.xyz/)
-
+CRAZE PANEL IS A MODDED VERSION OF SKYPORT PANEL
 ## Installation
-You can read our documentation at [skyport.dev](https://skyport.dev)
+**INSTALL NODE.JS**
 
+
+```plaintext
+curl -sL https://deb.nodesource.com/setup_20.x | sudo bash -
+```
+
+```plaintext
+apt-get install nodejs -y
+```
+**PANEL INSTALLATION**
+```plaintext
+git clone https://github.com/Mehetab1234bwbwb/panel5.git && cd panel5 &&
+npm install && npm run seed && npm create user && node .
+```
 ## Configuration
 Edit the `config.json` file in the root directory to set up the application settings including the database connection and port.
 

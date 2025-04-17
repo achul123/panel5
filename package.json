@@ -1,7 +1,7 @@
 {
-  "name": "skyport",
+  "name": "CRAZE PANEL",
   "version": "0.3.0",
-  "description": "Skyport is an open source panel for managing and operating game servers and applications built using Node.js with Express and Dockerode.",
+  "description": "OFFICIAL PANEL OF CRAZEHOST/CRAFTINGCRAZEGAMIMG.",
   "main": "index.js",
   "bin": {
     "skyport": "./exec/bin/index.js"
