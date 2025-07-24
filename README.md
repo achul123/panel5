@@ -1,3 +1,8 @@
+> ⚠️ **NOTE**  
+> The original **Skyport** organization has been deleted. I have recreated it under the new name: **[skyport-team](https://github.com/skyport-team)**.  
+> Please consider giving a ⭐ or forking the repo there: https://github.com/skyport-team 🙏
+
+
 ![\[!image\](https://i.imgur.com/SU7QypZ.png)](https://i.imgur.com/SU7QypZ.png)
 
 ![Discord](https://img.shields.io/discord/1253782902618194011?label=Discord&logo=Discord&logoColor=white&style=for-the-badge)
